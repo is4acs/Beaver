@@ -1,0 +1,40 @@
+{
+  "name": "beaver-app",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "build": "eas build --platform ios",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^14.0.2",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-navigation/bottom-tabs": "^6.5.20",
+    "@react-navigation/native": "^6.1.17",
+    "@react-navigation/native-stack": "^6.9.26",
+    "expo": "~51.0.0",
+    "expo-background-fetch": "~12.0.1",
+    "expo-constants": "~16.0.2",
+    "expo-haptics": "~13.0.1",
+    "expo-linear-gradient": "~13.0.2",
+    "expo-location": "~17.0.1",
+    "expo-router": "~3.5.14",
+    "expo-secure-store": "~13.0.2",
+    "expo-status-bar": "~1.12.1",
+    "expo-task-manager": "~11.8.2",
+    "react": "18.2.0",
+    "react-native": "0.74.2",
+    "react-native-maps": "1.14.0",
+    "react-native-webrtc": "^124.0.4",
+    "socket.io-client": "^4.7.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "~18.2.79",
+    "@types/react-native": "~0.73.0",
+    "typescript": "~5.3.3"
+  },
+  "private": true
+}

@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Beaver",
+    "slug": "beaver-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/icon.png",
+    "scheme": "beaver",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./src/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B4F8A"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.beaver.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Beaver a besoin d'accéder à votre localisation en permanence pour envoyer votre position à vos proches en cas d'urgence.",
+        "NSLocationAlwaysUsageDescription": "Beaver utilise votre position GPS en arrière-plan pour protéger votre sécurité.",
+        "NSLocationWhenInUseUsageDescription": "Beaver utilise votre position GPS pour vous localiser.",
+        "NSMicrophoneUsageDescription": "Beaver peut activer le microphone pour permettre à vos proches d'entendre votre environnement en cas d'urgence.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "audio"
+        ],
+        "NSUserActivityTypes": ["com.beaver.app.sos"]
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Beaver a besoin de votre position GPS pour alerter vos proches en cas d'urgence.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-background-fetch",
+        {}
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
