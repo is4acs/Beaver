@@ -12,7 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#1B4F8A"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.beaver.app",
@@ -27,7 +29,9 @@
           "fetch",
           "audio"
         ],
-        "NSUserActivityTypes": ["com.beaver.app.sos"]
+        "NSUserActivityTypes": [
+          "com.beaver.app.sos"
+        ]
       }
     },
     "plugins": [
@@ -43,7 +47,8 @@
       [
         "expo-background-fetch",
         {}
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

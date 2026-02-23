@@ -27,13 +27,25 @@ export const getContacts = async (): Promise<Contact[]> => {
   return data ? JSON.parse(data) : [];
 };
 
-// ---- Code PIN (stockage sécurisé) ----
+// ---- Code PIN (stockage sécurisé avec fallback AsyncStorage) ----
 export const savePinCode = async (pin: string): Promise<void> => {
-  await SecureStore.setItemAsync(STORAGE_KEYS.PIN_CODE, pin);
+  try {
+    await SecureStore.setItemAsync(STORAGE_KEYS.PIN_CODE, pin);
+  } catch (e) {
+    // Fallback to AsyncStorage on simulator / unsigned builds where Keychain is unavailable
+    console.warn('SecureStore unavailable, falling back to AsyncStorage for PIN:', e);
+    await AsyncStorage.setItem(STORAGE_KEYS.PIN_CODE, pin);
+  }
 };
 
 export const getPinCode = async (): Promise<string | null> => {
-  return SecureStore.getItemAsync(STORAGE_KEYS.PIN_CODE);
+  try {
+    const securePin = await SecureStore.getItemAsync(STORAGE_KEYS.PIN_CODE);
+    if (securePin) return securePin;
+  } catch (e) {
+    // Fallback: try AsyncStorage
+  }
+  return AsyncStorage.getItem(STORAGE_KEYS.PIN_CODE);
 };
 
 export const verifyPin = async (pin: string): Promise<boolean> => {

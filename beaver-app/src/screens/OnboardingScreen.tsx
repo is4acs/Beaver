@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { v4 as uuidv4 } from 'uuid';
+import * as Crypto from 'expo-crypto';
 import { Contact } from '../types';
 import { ContactCard } from '../components/ContactCard';
 import { PinPad } from '../components/PinPad';
@@ -73,7 +73,7 @@ export default function OnboardingScreen(): React.JSX.Element {
     }
 
     const newContact: Contact = {
-      id: uuidv4(),
+      id: Crypto.randomUUID(),
       name: newContactName.trim(),
       phone: phoneClean,
     };
@@ -119,7 +119,8 @@ export default function OnboardingScreen(): React.JSX.Element {
 
       // Navigation vers l'écran principal
       router.replace('/home');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Onboarding save error:', error?.message || error);
       Alert.alert('Erreur', 'Impossible de sauvegarder vos données. Réessayez.');
     } finally {
       setIsLoading(false);
