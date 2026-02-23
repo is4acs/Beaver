@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.beaver.app",
+      "bundleIdentifier": "com.beaversafety.app",
       "buildNumber": "1",
       "infoPlist": {
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Beaver a besoin d'accéder à votre localisation en permanence pour envoyer votre position à vos proches en cas d'urgence.",

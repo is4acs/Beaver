@@ -28,13 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>beaver</string>
-          <string>com.beaver.app</string>
-        </array>
-      </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>exp+beaver-app</string>
+          <string>com.beaversafety.app</string>
         </array>
       </dict>
     </array>
