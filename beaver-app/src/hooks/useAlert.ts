@@ -1,11 +1,12 @@
 /**
  * Hook principal de l'alerte Beaver
  * Orchestre : création session → GPS → alertes Twilio → WebRTC audio
+ * Gère la récupération de session après crash/redémarrage
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { BeaverSession, Contact, GpsPosition } from '../types';
-import { createSession, sendAlert, deactivateSession } from '../services/apiService';
+import { createSession, sendAlert, deactivateSession, getSession } from '../services/apiService';
 import {
   requestLocationPermissions,
   startBackgroundLocationTracking,
@@ -19,7 +20,13 @@ import {
   disconnectSocket,
 } from '../services/socketService';
 import { startAudioStream, stopAudioStream } from '../services/webrtcService';
-import { saveSessionId, clearSessionId } from '../services/storageService';
+import {
+  saveSessionId,
+  clearSessionId,
+  getSessionId,
+  getUserFirstName,
+  getContacts,
+} from '../services/storageService';
 import { ALERT_COUNTDOWN_SECONDS } from '../utils/constants';
 
 export interface UseAlertReturn {
@@ -43,6 +50,77 @@ export const useAlert = (): UseAlertReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCancelled = useRef(false);
+  const hasRecovered = useRef(false);
+
+  /**
+   * Récupération automatique de session au démarrage
+   * Si l'app a été fermée pendant une alerte active, on reprend le tracking
+   */
+  useEffect(() => {
+    if (hasRecovered.current) return;
+    hasRecovered.current = true;
+
+    const recoverSession = async (): Promise<void> => {
+      try {
+        const savedSessionId = await getSessionId();
+        if (!savedSessionId) return;
+
+        // Vérifier si la session est encore active sur le backend
+        const sessionData = await getSession(savedSessionId);
+        if (!sessionData || sessionData.status !== 'active') {
+          // Session expirée ou désactivée → nettoyage
+          await clearSessionId();
+          return;
+        }
+
+        // Session encore active → reprendre le tracking
+        console.log('🔄 Récupération de session active:', savedSessionId);
+
+        const [name, contacts] = await Promise.all([
+          getUserFirstName(),
+          getContacts(),
+        ]);
+
+        const recoveredSession: BeaverSession = {
+          sessionId: savedSessionId,
+          userFirstName: name ?? '',
+          contacts: contacts ?? [],
+          status: 'active',
+          createdAt: sessionData.createdAt ?? Date.now(),
+          expiresAt: sessionData.expiresAt ?? Date.now() + 3600000,
+          trackingUrl: `${process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001'}`.replace(':3001', ':5173') + `/s/${savedSessionId}`,
+        };
+
+        setSession(recoveredSession);
+        setIsActive(true);
+
+        // Reprendre Socket.IO + GPS
+        connectSocket();
+        joinSession(savedSessionId);
+
+        const hasPermission = await requestLocationPermissions();
+        if (hasPermission) {
+          await startBackgroundLocationTracking(savedSessionId, (position: GpsPosition) => {
+            sendGpsPosition(position);
+          });
+        }
+
+        // Reprendre audio (non-bloquant)
+        try {
+          await startAudioStream(savedSessionId);
+        } catch (e) {
+          console.warn('⚠️ Audio non disponible lors de la récupération:', e);
+        }
+
+        console.log('✅ Session récupérée avec succès');
+      } catch (error) {
+        console.warn('⚠️ Récupération de session échouée:', error);
+        await clearSessionId();
+      }
+    };
+
+    recoverSession();
+  }, []);
 
   /**
    * Démarre le compte à rebours avant envoi automatique des alertes

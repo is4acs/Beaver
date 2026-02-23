@@ -39,6 +39,7 @@ export default function RootLayout(): React.JSX.Element | null {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="home" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal' }} />
       </Stack>
     </>
   );

@@ -7,7 +7,8 @@
     "ios": "expo run:ios",
     "build": "eas build --platform ios",
     "lint": "eslint . --ext .ts,.tsx",
-    "android": "expo run:android"
+    "android": "expo run:android",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
@@ -46,6 +47,7 @@
     "@types/react": "~18.2.79",
     "@types/react-native": "~0.73.0",
     "babel-plugin-module-resolver": "^5.0.2",
+    "patch-package": "^8.0.1",
     "typescript": "~5.3.3"
   },
   "private": true

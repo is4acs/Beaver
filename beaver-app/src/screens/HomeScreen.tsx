@@ -3,7 +3,7 @@
  * - Bouton SOS central
  * - Statut de l'alerte
  * - Timer de sécurité
- * - Actions rapides
+ * - Appels d'urgence
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -15,10 +15,12 @@ import {
   Modal,
   Alert,
   AppState,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
 import { SOSButton } from '../components/SOSButton';
 import { PinPad } from '../components/PinPad';
 import { useAlert } from '../hooks/useAlert';
@@ -45,21 +47,29 @@ export default function HomeScreen(): React.JSX.Element {
     useAlert();
 
   // Chargement des données utilisateur
-  useEffect(() => {
-    const loadData = async (): Promise<void> => {
-      const [name, savedContacts, pin, duration] = await Promise.all([
-        getUserFirstName(),
-        getContacts(),
-        getPinCode(),
-        getTimerDuration(),
-      ]);
-      setFirstName(name ?? '');
-      setContacts(savedContacts);
-      setPinCode(pin ?? '');
-      setTimerDuration(duration);
-    };
-    loadData();
+  const loadData = useCallback(async (): Promise<void> => {
+    const [name, savedContacts, pin, duration] = await Promise.all([
+      getUserFirstName(),
+      getContacts(),
+      getPinCode(),
+      getTimerDuration(),
+    ]);
+    setFirstName(name ?? '');
+    setContacts(savedContacts);
+    setPinCode(pin ?? '');
+    setTimerDuration(duration);
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Recharger les données quand l'écran reprend le focus (retour de Settings)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   // Timer de sécurité countdown
   useEffect(() => {
@@ -114,7 +124,7 @@ export default function HomeScreen(): React.JSX.Element {
     const success = await cancelAlert(pin);
     if (success) {
       setShowPinModal(false);
-      Alert.alert('✅ Alerte désactivée', 'Vos proches ont été informés que tout va bien.');
+      Alert.alert('Alerte désactivée', 'Vos proches ont été informés que tout va bien.');
     } else {
       setPinError('Code PIN incorrect. Réessayez.');
     }
@@ -123,12 +133,35 @@ export default function HomeScreen(): React.JSX.Element {
   /**
    * Démarre le timer de sécurité
    */
-  const handleStartSecurityTimer = (): void => {
-    setSecurityTimerSeconds(timerDuration * 60);
+  const handleStartSecurityTimer = (duration: TimerDuration): void => {
+    setTimerDuration(duration);
+    setSecurityTimerSeconds(duration * 60);
     setSecurityTimerActive(true);
     Alert.alert(
-      '⏱️ Timer démarré',
-      `L'alerte se déclenchera automatiquement dans ${timerDuration} minutes si vous ne l'annulez pas.`
+      'Timer démarré',
+      `L'alerte se déclenchera automatiquement dans ${duration} minutes si vous ne l'annulez pas.`
+    );
+  };
+
+  /**
+   * Appelle un numéro d'urgence
+   */
+  const handleCallEmergency = (number: string, label: string): void => {
+    Alert.alert(
+      `Appeler le ${number}`,
+      `Vous allez appeler ${label}`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Appeler',
+          style: 'destructive',
+          onPress: () => {
+            Linking.openURL(`tel:${number}`).catch(() => {
+              Alert.alert('Erreur', 'Impossible de passer l\'appel');
+            });
+          },
+        },
+      ]
     );
   };
 
@@ -155,8 +188,16 @@ export default function HomeScreen(): React.JSX.Element {
                   : 'Vous êtes protégée'}
               </Text>
             </View>
-            <TouchableOpacity style={styles.settingsButton}>
-              <Ionicons name="settings-outline" size={24} color={COLORS.white} />
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => router.push('/settings')}
+              disabled={isActive}
+            >
+              <Ionicons
+                name="settings-outline"
+                size={24}
+                color={isActive ? 'rgba(255,255,255,0.4)' : COLORS.white}
+              />
             </TouchableOpacity>
           </View>
 
@@ -206,7 +247,7 @@ export default function HomeScreen(): React.JSX.Element {
           {/* ---- Timer de sécurité ---- */}
           {!isActive && (
             <View style={styles.timerSection}>
-              <Text style={styles.sectionTitle}>⏱️ Timer de sécurité</Text>
+              <Text style={styles.sectionTitle}>Timer de sécurité</Text>
               <Text style={styles.sectionSubtitle}>
                 L'alerte se déclenche automatiquement si vous ne répondez pas
               </Text>
@@ -233,7 +274,7 @@ export default function HomeScreen(): React.JSX.Element {
                         styles.timerBtn,
                         timerDuration === duration && styles.timerBtnActive,
                       ]}
-                      onPress={() => handleStartSecurityTimer()}
+                      onPress={() => handleStartSecurityTimer(duration)}
                     >
                       <Text
                         style={[
@@ -253,40 +294,67 @@ export default function HomeScreen(): React.JSX.Element {
           {/* ---- Contacts actifs ---- */}
           <View style={styles.contactsSection}>
             <Text style={styles.sectionTitle}>
-              👤 Vos proches ({contacts.length})
+              Vos proches ({contacts.length})
             </Text>
-            {contacts.slice(0, 3).map((contact) => (
-              <View key={contact.id} style={styles.contactItem}>
-                <View style={styles.contactAvatar}>
-                  <Text style={styles.contactInitial}>
-                    {contact.name[0].toUpperCase()}
-                  </Text>
-                </View>
-                <Text style={styles.contactName}>{contact.name}</Text>
-                {isActive && (
-                  <View style={styles.alertedBadge}>
-                    <Text style={styles.alertedText}>Alerté</Text>
+            {contacts.length === 0 ? (
+              <TouchableOpacity
+                style={styles.emptyContacts}
+                onPress={() => router.push('/settings')}
+              >
+                <Ionicons name="person-add-outline" size={24} color={COLORS.primary} />
+                <Text style={styles.emptyContactsText}>Ajoutez des contacts de confiance</Text>
+              </TouchableOpacity>
+            ) : (
+              contacts.slice(0, 3).map((contact) => (
+                <View key={contact.id} style={styles.contactItem}>
+                  <View style={styles.contactAvatar}>
+                    <Text style={styles.contactInitial}>
+                      {contact.name[0].toUpperCase()}
+                    </Text>
                   </View>
-                )}
-              </View>
-            ))}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.contactName}>{contact.name}</Text>
+                    <Text style={styles.contactPhone}>{contact.phone}</Text>
+                  </View>
+                  {isActive && (
+                    <View style={styles.alertedBadge}>
+                      <Text style={styles.alertedText}>Alerté</Text>
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+            {contacts.length > 3 && (
+              <Text style={styles.moreContacts}>
+                +{contacts.length - 3} autre{contacts.length - 3 > 1 ? 's' : ''}
+              </Text>
+            )}
           </View>
 
           {/* ---- Numéros d'urgence ---- */}
           <View style={styles.emergencySection}>
-            <Text style={styles.sectionTitle}>🚨 Urgences</Text>
+            <Text style={styles.sectionTitle}>Urgences</Text>
             <View style={styles.emergencyButtons}>
-              <TouchableOpacity style={[styles.emergencyBtn, styles.emergencyBtnPrimary]}>
+              <TouchableOpacity
+                style={[styles.emergencyBtn, styles.emergencyBtnPrimary]}
+                onPress={() => handleCallEmergency(EMERGENCY_NUMBERS.EUROPEAN, 'les urgences européennes (112)')}
+              >
                 <Text style={styles.emergencyBtnNumber}>{EMERGENCY_NUMBERS.EUROPEAN}</Text>
-                <Text style={styles.emergencyBtnLabel}>Urgences</Text>
+                <Text style={[styles.emergencyBtnLabel, { color: 'rgba(255,255,255,0.8)' }]}>Urgences</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.emergencyBtn}>
+              <TouchableOpacity
+                style={styles.emergencyBtn}
+                onPress={() => handleCallEmergency(EMERGENCY_NUMBERS.POLICE, 'la Police (17)')}
+              >
                 <Text style={[styles.emergencyBtnNumber, { color: COLORS.primary }]}>
                   {EMERGENCY_NUMBERS.POLICE}
                 </Text>
                 <Text style={styles.emergencyBtnLabel}>Police</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.emergencyBtn}>
+              <TouchableOpacity
+                style={styles.emergencyBtn}
+                onPress={() => handleCallEmergency(EMERGENCY_NUMBERS.FEMALE_VIOLENCE, 'Violences Femmes Info (3919)')}
+              >
                 <Text style={[styles.emergencyBtnNumber, { color: COLORS.warning }]}>
                   {EMERGENCY_NUMBERS.FEMALE_VIOLENCE}
                 </Text>
@@ -367,9 +435,13 @@ const styles = StyleSheet.create({
   contactItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   contactAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   contactInitial: { fontSize: 16, fontWeight: '700', color: COLORS.white },
-  contactName: { flex: 1, fontSize: 15, color: COLORS.black },
+  contactName: { fontSize: 15, fontWeight: '600', color: COLORS.black },
+  contactPhone: { fontSize: 12, color: COLORS.gray, marginTop: 1 },
   alertedBadge: { backgroundColor: '#DCFCE7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   alertedText: { fontSize: 11, fontWeight: '600', color: COLORS.success },
+  emptyContacts: { alignItems: 'center', paddingVertical: 20, gap: 8 },
+  emptyContactsText: { fontSize: 14, color: COLORS.primary, fontWeight: '600' },
+  moreContacts: { fontSize: 13, color: COLORS.gray, textAlign: 'center', marginTop: 8 },
   emergencySection: { backgroundColor: COLORS.white, borderRadius: 16, padding: 20, marginBottom: 24 },
   emergencyButtons: { flexDirection: 'row', gap: 12 },
   emergencyBtn: { flex: 1, borderRadius: 12, borderWidth: 2, borderColor: COLORS.lightGray, paddingVertical: 14, alignItems: 'center' },
