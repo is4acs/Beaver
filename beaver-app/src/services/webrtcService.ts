@@ -30,11 +30,11 @@ export const startAudioStream = async (sessionId: string): Promise<void> => {
     });
 
     // Capture du micro (audio seulement, pas de vidéo)
+    // Note : sampleRate n'est pas un constraint supporté par react-native-webrtc sur iOS
     localStream = await mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
-        sampleRate: 44100,
       },
       video: false,
     });
